@@ -99,13 +99,73 @@ class SEP_Plugin {
         }
         ?>
         <div id="sep-wrapper">
+			<style>
+			.info-icon {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    color: #E33309; /* Customize to match your theme */
+    margin-left: 5px;
+}
+
+.info-icon i {
+    font-size: 16px;
+}
+
+/* Tooltip styling */
+.info-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%; /* Show above icon */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+    z-index: 999;
+    white-space: normal;
+    width: max-content;
+    max-width: 240px; /* Responsive width */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    text-align: left;
+}
+
+/* Show tooltip on hover */
+.info-icon:hover::after {
+    opacity: 1;
+}
+
+/* Responsive tweaks (optional but useful) */
+@media (max-width: 480px) {
+    .info-icon::after {
+        font-size: 13px;
+        max-width: 200px;
+        padding: 6px 10px;
+    }
+}
+
+
+			</style>
             <p>
-                <label for="sep_num_episodes"><strong><?php esc_html_e( 'Number of Episodes:', 'sponsor-episodes' ); ?></strong></label>
+                <label for="sep_num_episodes"><strong><?php esc_html_e( 'Number of Episodes to Sponsor:', 'sponsor-episodes' ); ?></strong></label>
                 <select id="sep_num_episodes" name="sep_num_episodes" required>
                     <option value=""><?php esc_html_e( 'Select…', 'sponsor-episodes' ); ?></option>
                     <?php for ( $i = 1; $i <= 10; $i++ ): ?>
-                        <option value="<?php echo $i; ?>"><?php echo sprintf( esc_html__( '%d Episode(s)', 'sponsor-episodes' ), $i ); ?></option>
-                    <?php endfor; ?>
+    <option value="<?php echo $i; ?>">
+        <?php 
+            printf(
+                esc_html__( '%d %s', 'sponsor-episodes' ),
+                $i,
+                ( $i === 1 ) ? esc_html__( 'Episode', 'sponsor-episodes' ) : esc_html__( 'Episodes', 'sponsor-episodes' )
+            );
+        ?>
+    </option>
+<?php endfor; ?>
                 </select>
             </p>
             <div id="sep-repeat-container"></div>
@@ -113,8 +173,12 @@ class SEP_Plugin {
             <p>
                 <label>
                     <input type="checkbox" id="sep-tos" name="sep_tos" value="1" />
-                    <?php esc_html_e( 'I agree to the Terms of Service', 'sponsor-episodes' ); ?>
-                </label>
+<?php
+    echo sprintf(
+        __( 'I agree to the %s', 'sponsor-episodes' ),
+        '<a href="#tos-popup">' . esc_html__( 'Terms of Service', 'sponsor-episodes' ) . '</a>'
+    );
+    ?>                </label>
             </p>
         </div>
         <?php

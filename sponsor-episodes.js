@@ -4,68 +4,90 @@
  * - Hides/shows total price
  * - Enforces TOS checkbox before enabling Buy Now
  */
-
-jQuery( function($) {
-    var settings = SEP_Settings,
-        $num     = $('#sep_num_episodes'),
-        $container = $('#sep-repeat-container'),
-        $price      = $('#sep-price'),
-        $tos        = $('#sep-tos'),
-        $button     = $('button.single_add_to_cart_button');
+jQuery(function($) {
+    var s         = SEP_Settings,
+        $num      = $('#sep_num_episodes'),
+        $cont     = $('#sep-repeat-container'),
+        $price    = $('#sep-price'),
+        $tos      = $('#sep-tos'),
+        $button   = $('button.single_add_to_cart_button'),
+        categories = [];
 
     // Fetch categories once
-    var categories = [];
-    $.post(settings.ajax_url, { action: 'sep_get_categories' }, function(data) {
+    $.post(s.ajax_url, { action: 'sep_get_categories' }, function(data) {
         categories = data;
     });
 
     // Disable Buy Now until TOS checked
     $button.prop('disabled', true);
-    $tos.on('change', function(){
-        $button.prop('disabled', ! this.checked);
+    $tos.on('change', function() {
+        $button.prop('disabled', !this.checked);
     });
 
-    // On episode count change
-    $num.on('change', function(){
+    // On number change
+    $num.on('change', function() {
         var n = parseInt(this.value, 10);
-        $container.empty();
+        $cont.empty();
         $price.hide();
 
-        if (!n) {
+        if (!n || n < 1) {
             return;
         }
 
         for (var i = 1; i <= n; i++) {
-            // Date field
             var dateId = 'sep_date_' + i,
                 catId  = 'sep_cat_'  + i;
 
-            $container.append(
-                '<div class="sep-block">' +
-                  '<p><label for="'+dateId+'">Episode '+i+' Date:</label>' +
-                  '<input type="text" id="'+dateId+'" name="sep_dates[]" ' +
-                    'class="sep-episode-date" placeholder="Select Date for Episode '+i+'" required /></p>' +
-                  '<p><label for="'+catId+'">Episode '+i+' Category:</label>' +
-                  '<select id="'+catId+'" name="sep_categories[]" required>' +
-                    '<option value="">Select Category for Episode '+i+'</option>' +
-                  '</select></p>' +
-                '</div>'
-            );
+            // Icons
+            var dateIcon = '<span class="info-icon" ' +
+                           'data-tooltip="Please select the date that you would like your sponsored episode to appear.">' +
+                           '<i class="fas fa-info-circle"></i>' +
+                           '</span>';
 
-            // Populate categories
+            var catIcon  = '<span class="info-icon" ' +
+                           'data-tooltip="Please select the category for your sponsored episode.">' +
+                           '<i class="fas fa-info-circle"></i>' +
+                           '</span>';
+
+            // Build block
+            var blockHtml = 
+                '<div class="sep-block">' +
+                  '<p>' +
+                    '<label for="' + dateId + '">' +
+                      'Episode ' + i + ' Date:' +
+                      dateIcon +
+                    '</label>' +
+                    '<input type="text" id="' + dateId + '" name="sep_dates[]" ' +
+                      'class="sep-episode-date" ' +
+                      'placeholder="Select Requested Publishing for Episode ' + i + '" required />' +
+                  '</p>' +
+                  '<p>' +
+                    '<label for="' + catId + '">' +
+                      'Episode ' + i + ' Category:' +
+                      catIcon +
+                    '</label>' +
+                    '<select id="' + catId + '" name="sep_categories[]" required>' +
+                      '<option value="">Select Requested Topic Category for Episode ' + i + '</option>' +
+                    '</select>' +
+                  '</p>' +
+                '</div>';
+
+            $cont.append(blockHtml);
+
+            // Populate category select
             var $sel = $('#' + catId);
-            $.each(categories, function(_, term){
-                $sel.append('<option value="'+term.term_id+'">'+term.name+'</option>');
+            $.each(categories, function(_, term) {
+                $sel.append('<option value="' + term.term_id + '">' + term.name + '</option>');
             });
         }
 
         // Initialize Flatpickr
         flatpickr('.sep-episode-date', {
-            minDate: new Date().fp_incr(settings.minDateOffset)
+            minDate: new Date().fp_incr(s.minDateOffset)
         });
 
         // Show total price
-        var total = settings.episodeRate * n;
+        var total = s.episodeRate * n;
         $price.text('Total: $' + total.toLocaleString()).show();
     });
 });
