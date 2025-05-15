@@ -2,7 +2,7 @@
 /**
  * Plugin Name:     Sponsor Episodes for WooCommerce
  * Description:     Dynamic per-episode sponsorship: date+category fields, $1,000/episode pricing, TOS checkbox, Buy Now → Checkout.
- * Version:         1.0.0
+ * Version:         1.1
  * Author:          Shan
  * Author URI:      https://stonefly.com
  * Text Domain:     sponsor-episodes
@@ -15,39 +15,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SEP_Plugin {
 
     /** @var int[] Product IDs where sponsorship applies */
-    private $targets = [ 4226 ]; // ← Edit this array
+    private $targets = [ 4226 ]; // ← Edit these IDs
 
-    /** @const int Per-episode rate */
+    /** @const int Per-episode rate in USD */
     const RATE = 1000;
 
     /** Singleton instance */
     private static $instance = null;
 
     private function __construct() {
-        // Front‑end assets & AJAX
-        add_action( 'wp_enqueue_scripts',               [ $this, 'enqueue_assets' ] );
-        add_action( 'wp_ajax_sep_get_categories',       [ $this, 'ajax_get_categories' ] );
-        add_action( 'wp_ajax_nopriv_sep_get_categories',[ $this, 'ajax_get_categories' ] );
+        add_action( 'wp_enqueue_scripts',                 [ $this, 'enqueue_assets' ] );
+        add_action( 'wp_ajax_sep_get_categories',         [ $this, 'ajax_get_categories' ] );
+        add_action( 'wp_ajax_nopriv_sep_get_categories',  [ $this, 'ajax_get_categories' ] );
 
-        // Form rendering & validation
         add_action( 'woocommerce_before_add_to_cart_button', [ $this, 'render_fields' ] );
         add_filter( 'woocommerce_add_to_cart_validation',    [ $this, 'validate' ], 10, 2 );
 
-        // Cart item data & price
         add_filter( 'woocommerce_add_cart_item_data',        [ $this, 'add_cart_item_data' ], 10, 2 );
-        add_filter( 'woocommerce_get_cart_item_from_session', [ $this, 'load_cart_item_data' ], 10, 2 );
+        add_filter( 'woocommerce_get_cart_item_from_session',[ $this, 'load_cart_item_data' ], 10, 2 );
         add_action( 'woocommerce_before_calculate_totals',    [ $this, 'apply_price' ], 20 );
 
-        // Display meta & save to order
         add_filter( 'woocommerce_get_item_data',             [ $this, 'display_cart_meta' ], 10, 2 );
         add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'save_order_meta' ], 10, 4 );
 
-        // Buy Now button & redirect
         add_filter( 'woocommerce_product_single_add_to_cart_text', [ $this, 'button_text' ] );
         add_filter( 'woocommerce_add_to_cart_redirect',            [ $this, 'redirect_to_checkout' ] );
     }
 
-    /** Retrieve singleton */
     public static function instance() {
         if ( null === self::$instance ) {
             self::$instance = new self();
@@ -55,47 +49,50 @@ class SEP_Plugin {
         return self::$instance;
     }
 
-    /** Only run on specified product pages */
     private function is_target() {
         return is_product() && in_array( get_the_ID(), $this->targets, true );
     }
 
-    /** Enqueue Flatpickr + our JS */
     public function enqueue_assets() {
         if ( ! $this->is_target() ) {
             return;
         }
 
+        // Flatpickr
         wp_enqueue_script( 'flatpickr', 'https://cdn.jsdelivr.net/npm/flatpickr', [], null, true );
         wp_enqueue_style( 'flatpickr-css', 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css' );
 
+        // Our JS
         wp_enqueue_script(
             'sep-js',
             plugin_dir_url( __FILE__ ) . 'sponsor-episodes.js',
             [ 'jquery', 'flatpickr' ],
-            '1.0.0',
+            '1.0.1',
             true
         );
 
+        // Hide default quantity input and localize settings
+        wp_add_inline_style( 'flatpickr-css', "
+            input.qty, .quantity { display: none !important; }
+        " );
+
         wp_localize_script( 'sep-js', 'SEP_Settings', [
             'ajax_url'      => admin_url( 'admin-ajax.php' ),
-            'minDateOffset' => 2,           // days ahead
-            'episodeRate'   => self::RATE,  
+            'minDateOffset' => 2,
+            'episodeRate'   => self::RATE,
             'targets'       => $this->targets,
         ] );
     }
 
-    /** AJAX: return all WP categories */
     public function ajax_get_categories() {
         $terms = get_terms( [ 'taxonomy' => 'category', 'hide_empty' => false ] );
-        $out = [];
+        $out   = [];
         foreach ( $terms as $t ) {
             $out[] = [ 'term_id' => $t->term_id, 'name' => $t->name ];
         }
         wp_send_json( $out );
     }
 
-    /** Render dropdown + container + price + TOS + Buy Now */
     public function render_fields() {
         if ( ! $this->is_target() ) {
             return;
@@ -115,7 +112,7 @@ class SEP_Plugin {
             <p id="sep-price" style="display:none; font-weight:bold;"></p>
             <p>
                 <label>
-                    <input type="checkbox" id="sep-tos" />
+                    <input type="checkbox" id="sep-tos" name="sep_tos" value="1" />
                     <?php esc_html_e( 'I agree to the Terms of Service', 'sponsor-episodes' ); ?>
                 </label>
             </p>
@@ -123,21 +120,19 @@ class SEP_Plugin {
         <?php
     }
 
-    /** Server‑side: validate count, dates, categories, TOS */
     public function validate( $passed, $product_id ) {
         if ( ! in_array( $product_id, $this->targets, true ) ) {
             return $passed;
         }
-
         if ( empty( $_POST['sep_num_episodes'] ) ) {
             wc_add_notice( __( 'Please select number of episodes.', 'sponsor-episodes' ), 'error' );
             return false;
         }
         $num  = absint( $_POST['sep_num_episodes'] );
-        $dates      = $_POST['sep_dates']     ?? [];
-        $categories = $_POST['sep_categories']?? [];
+        $dates = $_POST['sep_dates']      ?? [];
+        $cats  = $_POST['sep_categories'] ?? [];
 
-        if ( count( $dates ) < $num || count( $categories ) < $num ) {
+        if ( count( $dates ) < $num || count( $cats ) < $num ) {
             wc_add_notice( __( 'Please fill date & category for every episode.', 'sponsor-episodes' ), 'error' );
             return false;
         }
@@ -147,23 +142,20 @@ class SEP_Plugin {
                 return false;
             }
         }
-        // TOS must be checked client‑side; double‑check
         if ( empty( $_POST['sep_tos'] ) ) {
             wc_add_notice( __( 'You must accept the Terms of Service.', 'sponsor-episodes' ), 'error' );
             return false;
         }
-
         return $passed;
     }
 
-    /** Add episode data + custom price to cart item */
     public function add_cart_item_data( $cart_item_data, $product_id ) {
         if ( ! in_array( $product_id, $this->targets, true ) ) {
             return $cart_item_data;
         }
-        $n      = absint( $_POST['sep_num_episodes'] );
-        $dates      = array_map( 'sanitize_text_field', $_POST['sep_dates'] ?? [] );
-        $cats       = array_map( 'absint', $_POST['sep_categories'] ?? [] );
+        $n    = absint( $_POST['sep_num_episodes'] );
+        $dates = array_map( 'sanitize_text_field', $_POST['sep_dates']      ?? [] );
+        $cats  = array_map( 'absint',             $_POST['sep_categories'] ?? [] );
 
         $cart_item_data['sep_num']    = $n;
         $cart_item_data['sep_dates']  = $dates;
@@ -174,7 +166,6 @@ class SEP_Plugin {
         return $cart_item_data;
     }
 
-    /** Restore data from session */
     public function load_cart_item_data( $item, $values ) {
         foreach ( [ 'sep_num','sep_dates','sep_cats','sep_price','sep_key' ] as $key ) {
             if ( isset( $values[ $key ] ) ) {
@@ -184,7 +175,6 @@ class SEP_Plugin {
         return $item;
     }
 
-    /** Override price in cart/checkout */
     public function apply_price( $cart ) {
         foreach ( $cart->get_cart() as $item ) {
             if ( isset( $item['sep_price'] ) ) {
@@ -193,20 +183,18 @@ class SEP_Plugin {
         }
     }
 
-    /** Show metadata under cart items */
     public function display_cart_meta( $meta, $item ) {
         if ( isset( $item['sep_num'] ) ) {
             $meta[] = [ 'key'=> __( 'Episodes', 'sponsor-episodes' ), 'value'=> $item['sep_num'] ];
             foreach ( $item['sep_dates'] as $i => $d ) {
                 $meta[] = [ 'key'=> sprintf( __( 'Episode %d Date', 'sponsor-episodes' ), $i+1 ), 'value'=> esc_html($d) ];
-                $term   = get_term( $item['sep_cats'][$i] );
+                $term   = get_term( $item['sep_cats'][ $i ] );
                 $meta[] = [ 'key'=> sprintf( __( 'Episode %d Category', 'sponsor-episodes' ), $i+1 ), 'value'=> $term? $term->name : '' ];
             }
         }
         return $meta;
     }
 
-    /** Save to order items */
     public function save_order_meta( $line_item, $cart_key, $values ) {
         if ( isset( $values['sep_num'] ) ) {
             $line_item->add_meta_data( __( 'Episodes', 'sponsor-episodes' ), $values['sep_num'], true );
@@ -216,22 +204,20 @@ class SEP_Plugin {
                     $d,
                     true
                 );
-                $term = get_term( $values['sep_cats'][$i] );
+                $term = get_term( $values['sep_cats'][ $i ] );
                 $line_item->add_meta_data(
                     sprintf( __( 'Episode %d Category', 'sponsor-episodes' ), $i+1 ),
-                    $term ? $term->name : '',
+                    $term? $term->name : '',
                     true
                 );
             }
         }
     }
 
-    /** Change button text */
     public function button_text() {
         return $this->is_target() ? __( 'Buy Now', 'sponsor-episodes' ) : null;
     }
 
-    /** Redirect to checkout on add-to-cart */
     public function redirect_to_checkout( $url ) {
         if ( isset( $_REQUEST['add-to-cart'] ) && in_array( intval( $_REQUEST['add-to-cart'] ), $this->targets, true ) ) {
             return wc_get_checkout_url();
@@ -240,5 +226,5 @@ class SEP_Plugin {
     }
 }
 
-// Init plugin
+// Initialize
 SEP_Plugin::instance();
