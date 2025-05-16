@@ -19,10 +19,10 @@ jQuery(function($) {
     });
 
     // Disable Buy Now until TOS checked
-    $button.prop('disabled', true);
-    $tos.on('change', function() {
-        $button.prop('disabled', !this.checked);
-    });
+  //  $button.prop('disabled', true);
+//     $tos.on('change', function() {
+//         $button.prop('disabled', !this.checked);
+//     });
 
     // On number change
     $num.on('change', function() {
@@ -40,12 +40,12 @@ jQuery(function($) {
 
             // Icons
             var dateIcon = '<span class="info-icon" ' +
-                           'data-tooltip="Please select the date that you would like your sponsored episode to appear.">' +
+                           'data-tooltip="Please select the date that you would like  to request your sponsored podcast to be published on.">' +
                            '<i class="fas fa-info-circle"></i>' +
                            '</span>';
 
             var catIcon  = '<span class="info-icon" ' +
-                           'data-tooltip="Please select the category for your sponsored episode.">' +
+                           'data-tooltip="Please select the topic category that you would like your sponsored podcast to be about.">' +
                            '<i class="fas fa-info-circle"></i>' +
                            '</span>';
 
@@ -90,4 +90,20 @@ jQuery(function($) {
         var total = s.episodeRate * n;
         $price.text('Total: $' + total.toLocaleString()).show();
     });
+	//TOS Checkbox validation
+	$('form.cart').on('submit', function(e) {
+        $('.sep-tos-error').remove();
+        if (!$('#sep-tos').is(':checked')) {
+            e.preventDefault();
+            var err = $(
+              '<div class="sep-tos-error" ' +
+                   'style="color:red; margin-top:5px; font-size:0.9em;">' +
+                'Please agree to the Terms and Conditions before proceeding.' +
+              '</div>'
+            );
+            $('#sep-tos').closest('p').append(err);
+        }
+    });
 });
+
+

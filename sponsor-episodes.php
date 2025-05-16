@@ -78,7 +78,7 @@ class SEP_Plugin {
 
         wp_localize_script( 'sep-js', 'SEP_Settings', [
             'ajax_url'      => admin_url( 'admin-ajax.php' ),
-            'minDateOffset' => 2,
+            'minDateOffset' => 3,
             'episodeRate'   => self::RATE,
             'targets'       => $this->targets,
         ] );
@@ -200,12 +200,12 @@ class SEP_Plugin {
             wc_add_notice( __( 'Please fill date & category for every episode.', 'sponsor-episodes' ), 'error' );
             return false;
         }
-        foreach ( $dates as $d ) {
-            if ( strtotime( sanitize_text_field( $d ) ) < strtotime( '+2 days' ) ) {
-                wc_add_notice( __( 'Each date must be at least 48 hours in the future.', 'sponsor-episodes' ), 'error' );
-                return false;
-            }
-        }
+//         foreach ( $dates as $d ) {
+//             if ( strtotime( sanitize_text_field( $d ) ) < strtotime( '+2 days' ) ) {
+//                 wc_add_notice( __( 'Each date must be at least 48 hours in the future.', 'sponsor-episodes' ), 'error' );
+//                 return false;
+//             }
+//         }
         if ( empty( $_POST['sep_tos'] ) ) {
             wc_add_notice( __( 'You must accept the Terms of Service.', 'sponsor-episodes' ), 'error' );
             return false;
