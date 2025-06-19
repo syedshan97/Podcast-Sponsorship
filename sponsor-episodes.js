@@ -110,6 +110,12 @@ if (!val) {
       if ($b.find('#sep_linkedin_' + j).is(':checked')) {
         total += 2000;
       }
+      if ($b.find('#sep_slides_' + j).is(':checked')) {
+        total += 500;
+      }
+      if ($b.find('#sep_multimedia_' + j).is(':checked')) {
+        total += 700;
+      }
     });
     if (total > 0) $price.text('Total (all episodes): $' + total.toLocaleString()).show();
     else           $price.hide();
@@ -128,7 +134,9 @@ if (!val) {
             lvlId       = 'sep_level_' + i,
             emailChkId  = 'sep_email_' + i,
             emailOptId  = 'sep_email_option_' + i,
-            linkedinId  = 'sep_linkedin_' + i;
+            linkedinId  = 'sep_linkedin_' + i,
+            slidesId    = 'sep_slides_' + i,
+            multimediaId= 'sep_multimedia_' + i;
 
         //var icon = '<span class="info-icon" title="Tooltip text here"><i class="fas fa-info-circle"></i></span>';
             var icon = '<span class="info-icon" ' +
@@ -156,11 +164,20 @@ if (!val) {
                            'data-tooltip="Select the Audience Reach you want for your Sponsored Podcast">' +
                            '<i class="fas fa-info-circle"></i>' +
                            '</span>';
+        var iconslides = '<span class="info-icon" ' +
+                           'data-tooltip="Check if you want Add-on for Podcast with Slides ($500)">' +
+                           '<i class="fas fa-info-circle"></i>' +
+                           '</span>';
+        var iconmulti = '<span class="info-icon" ' +
+                           'data-tooltip="Check if you want Add-on for Podcast with Slides & Video ($700)">' +
+                           '<i class="fas fa-info-circle"></i>' +
+                           '</span>';
+
         var $box = $(
           '<fieldset class="sep-block">'+
             '<legend>Episode '+i+'</legend>'+
 
-            '<p><label for="'+lvlId+'">Level * '+iconss+'</label>' +
+            '<p><label for="'+lvlId+'">Sponsorship Level * '+iconss+'</label>' +
               '<select id="'+lvlId+'" name="sep_levels[]" required>' +
                 '<option value="" disabled selected>Select Level</option>' +
                 '<option value="Ad">Sponsor an Ad for Podcast Episode ($1,000)</option>' +
@@ -197,6 +214,15 @@ if (!val) {
             '<p><label for="'+linkedinId+'">' +
               '<input type="checkbox" id="'+linkedinId+'" name="sep_linkedin_promo['+(i-1)+']" />Add-on: LinkedIn Ads Promotion ($2,000)' +
             '</label>'+iconssss+'</p>'+
+
+            '<p><label for="'+slidesId+'">' +
+              '<input type="checkbox" id="'+slidesId+'" name="sep_slides_promo['+(i-1)+']" />Add-on: Podcast with Slides ($500)' +
+            '</label>'+iconslides+'</p>'+
+
+            '<p><label for="'+multimediaId+'">' +
+              '<input type="checkbox" id="'+multimediaId+'" name="sep_multimedia_promo['+(i-1)+']" />Add-on: Podcast with Slides & Video ($700)' +
+            '</label>'+iconmulti+'</p>'+
+
           '</fieldset>'
         );
         $cont.append($box);
@@ -214,7 +240,7 @@ if (!val) {
         });
 
         // bind recalc on selects & checkboxes
-        $box.find('#'+lvlId+', #'+emailOptId+', #'+linkedinId).on('change', recalc);
+        $box.find('#'+lvlId+', #'+emailOptId+', #'+linkedinId+', #'+slidesId+', #'+multimediaId).on('change', recalc);
 
         // init datepicker
         flatpickr('#'+dateId, { minDate: new Date().fp_incr(s.minDateOffset) });
@@ -225,5 +251,3 @@ if (!val) {
     recalc();
   });
 });
-
-
