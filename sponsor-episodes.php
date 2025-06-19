@@ -1,10 +1,9 @@
 <?php
 /**
  * Plugin Name:     Sponsor Episodes for WooCommerce
- * Description:     Dynamic per-episode sponsorship: date+category fields, $1,000/episode pricing, TOS checkbox, Buy Now → Checkout.
- * Version:         1.2
- * Author:          Shan
- * Author URI:      https://stonefly.com
+ * Description:     Dynamic per-episode sponsorship: level, date, category, email & LinkedIn promos, real-time pricing, TOS, Buy Now→Checkout, info‑icons, styled boxes, thank-you message.
+ * Version:         1.3
+ * Author:          Syed Shan
  * Text Domain:     sponsor-episodes
  */
 
@@ -13,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class SEP_Plugin {
 
     /** @var int[] Product IDs where sponsorship applies */
-    private $targets = [ 4226 ]; // ← Edit your product IDs heregit 
+    private $targets = [ 2712 ]; // ← Edit your product IDs here
 
     /** @var SEP_Plugin */
     private static $instance = null;
@@ -194,6 +193,9 @@ class SEP_Plugin {
         $emailChk = $_POST['sep_email_promo']   ?? [];
         $emailOpt = $_POST['sep_email_options'] ?? [];
         $linkedin = $_POST['sep_linkedin_promo']?? [];
+		$slides   = $_POST['sep_slides_promo']   ?? [];
+		$multimedia = $_POST['sep_multimedia_promo'] ?? [];
+
 
         if ( $num < 1 ) {
             wc_add_notice( __( 'Please select number of episodes.', 'sponsor-episodes' ), 'error' );
@@ -228,6 +230,9 @@ class SEP_Plugin {
         $emailChk = $_POST['sep_email_promo']   ?? [];
         $emailOpt = $_POST['sep_email_options'] ?? [];
         $linkedin = $_POST['sep_linkedin_promo']?? [];
+		$slides   = $_POST['sep_slides_promo'] ?? [];
+		$multimedia = $_POST['sep_multimedia_promo'] ?? [];
+
 
         $total = 0;
         for ( $i = 0; $i < $num; $i++ ) {
@@ -240,6 +245,12 @@ class SEP_Plugin {
             if ( isset( $linkedin[ $i ] ) ) {
                 $total += 2000;
             }
+			if ( isset( $slides[ $i ] ) ) {
+            $total += 500; //new
+            }
+			if ( isset( $multimedia[ $i ] ) ) {
+            $total += 700;
+            }
         }
 
         $cart_item_data['sep_num']          = $num;
@@ -249,6 +260,8 @@ class SEP_Plugin {
         $cart_item_data['sep_email_chk']    = $emailChk;
         $cart_item_data['sep_email_opts']   = $emailOpt;
         $cart_item_data['sep_linkedin_chk'] = $linkedin;
+		$cart_item_data['sep_slides_chk']   = $slides; //new
+		$cart_item_data['sep_multimedia_chk'] = $multimedia;
         $cart_item_data['sep_price']        = $total;
         $cart_item_data['sep_key']          = wp_generate_uuid4();
 
@@ -306,6 +319,22 @@ class SEP_Plugin {
                         'value' => esc_html__( 'LinkedIn Ads Promotion', 'sponsor-episodes' ),
                     ];
                 }
+				if ( isset( $item['sep_slides_chk'][ $i ] ) ) {
+    $meta[] = [
+        'key'   => sprintf( __( 'Episode %d Slides', 'sponsor-episodes' ), $i+1 ),
+        'value' => esc_html__( 'Podcast with Slides Add‑On ($500)', 'sponsor-episodes' ),
+    ];
+}
+				
+				// Multimedia add‑on
+if ( isset( $item['sep_multimedia_chk'][ $i ] ) ) {
+    $meta[] = [
+        'key'   => sprintf( __( 'Episode %d Multimedia', 'sponsor-episodes' ), $i + 1 ),
+        'value' => esc_html__( 'Podcast with Slides & Video Add‑On ($700)', 'sponsor-episodes' ),
+    ];
+}
+
+
             }
         }
         return $meta;
@@ -348,6 +377,23 @@ class SEP_Plugin {
                         true
                     );
                 }
+				
+				if ( isset( $values['sep_slides_chk'][ $i ] ) ) {
+    $line_item->add_meta_data(
+        sprintf( __( 'Episode %d Slides', 'sponsor-episodes' ), $i+1 ),
+        __( 'Podcast with Slides Add‑On ($500)', 'sponsor-episodes' ),
+        true
+    );
+}
+				
+				// Multimedia add‑on
+if ( isset( $values['sep_multimedia_chk'][ $i ] ) ) {
+    $line_item->add_meta_data(
+        sprintf( __( 'Episode %d Multimedia', 'sponsor-episodes' ), $i + 1 ),
+        __( 'Podcast with Slides & Video Add‑On ($700)', 'sponsor-episodes' ),
+        true
+    );
+}
             }
         }
     }
@@ -375,7 +421,7 @@ class SEP_Plugin {
  */
 public function thankyou_message( $text, $order ) {
     // Merchant name (uppercased)
-    $merchant = 'PARSINTLCOMPUTER';
+    $merchant = 'TECH DAILY AI';
     // Order total formatted by WooCommerce
     $amount   = $order->get_formatted_order_total();
 
